@@ -6,8 +6,7 @@ FROM bitnami/php-fpm:$PHP_VERSION as base
 
 LABEL \
 	maintainer="Domparso <domparso@hotmail.com>" \
-	org.opencontainers.image.authors="Domparso" \
-	S6_OVERLAY_VERSION="3.1.5.0"
+	org.opencontainers.image.authors="Domparso"
 
 RUN apt-get update \
 	&& apt-get install -y git wget bzip2 build-essential php7.4-dev libxml2 libxml2-dev\
@@ -53,12 +52,6 @@ RUN apt-get update \
 # 时间同步
 RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
-# s6-overlay
-ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp
-RUN tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz
-ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz /tmp
-RUN tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz
-
 # 开启cron日志
 # RUN sed -i s@/#cron.*/@/cron.*/@g /etc/rsyslog.conf
 
@@ -71,5 +64,3 @@ RUN chmod +x /usr/local/bin/init.sh
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-ENTRYPOINT ["/init"]
-
