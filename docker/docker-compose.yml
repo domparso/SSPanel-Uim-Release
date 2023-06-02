@@ -1,0 +1,42 @@
+#
+
+version: '3'
+services:
+  sspanel:
+    container_name: ${CONTAINER_NAME}
+    image: "${REPOSITORY}/${IMAGE_NAME}:${IMAGE_TAG}"
+    # ports:
+      # - '9000:9000'
+    environment:
+      - APPKEY=f6lcaigi6xuz2hu1n33avnvjnp3d8104
+      - APPNAME=Shadow
+      - BASEURL=https://shadow.ssn571.boats
+      - MUKEY=v3etzbtiuw8ifsagyjvb7bcz5uynapct
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_DATABASE=sspanel
+      - DB_USERNAME=sh_sspanel
+      - DB_PASSWORD=53yow0IM%PnzY5_ZJ
+      - MAXMIND_LICENSE_KEY=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
+      - DBMODE=INIT     # init / update
+      - ADMIN_MAIL=hathawaynoah@hotmail.com
+      - ADMIN_PASSWORD=nb0954HuanXiang..
+      # - DOWNLOADCLIENT=true
+      - REINSTALL=true
+      - SAVECONFIG=true
+      - REPOVISI=public # public / private
+      - GITREPO=github # github / gitlab
+      - REPOURL="https://github.com/Anankke/SSPanel-Uim.git"
+      - BRANCH=2023.3
+    volumes:
+      - '/home/dockerApps/Data/nginx/www/SSPanel-Uim:/app'
+      - '/home/dockerApps/Data/sspanel/config:/opt/bitnami/php/etc'
+      - '/home/dockerApps/Data/sspanel/backup:/opt/bitnami/backup'
+    restart: always
+    networks:
+      - extnetwork
+
+networks:
+  extnetwork:
+    external: true
+
