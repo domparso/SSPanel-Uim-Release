@@ -1,42 +1,100 @@
 #
 
 version: '3'
+
 services:
+
+  nginx:
+    container_name: nginx
+    image: docker.io/nginx
+    restart: always
+    ports:
+     - "80:80"
+     - "443:443"
+    volumes:
+     - nginx_www:/usr/share/nginx/html
+     - nginx_config:/etc/nginx/conf.d
+     - nginx_ssl:/etc/nginx/ssl
+     - nginx_log:/var/log/nginx
+    networks:
+      - sspanel_network
+
   sspanel:
     container_name: ${CONTAINER_NAME}
     image: "${REPOSITORY}/${IMAGE_NAME}:${IMAGE_TAG}"
-    # ports:
-      # - '9000:9000'
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    env_file:
+     - .env
     environment:
-      - APPKEY=f6lcaigi6xuz2hu1n33avnvjnp3d8104
-      - APPNAME=Shadow
-      - BASEURL=https://shadow.ssn571.boats
-      - MUKEY=v3etzbtiuw8ifsagyjvb7bcz5uynapct
-      - DB_HOST=mariadb
-      - DB_PORT=3306
-      - DB_DATABASE=sspanel
-      - DB_USERNAME=sh_sspanel
-      - DB_PASSWORD=53yow0IM%PnzY5_ZJ
-      - MAXMIND_LICENSE_KEY=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
-      - DBMODE=INIT     # init / update
-      - ADMIN_MAIL=hathawaynoah@hotmail.com
-      - ADMIN_PASSWORD=nb0954HuanXiang..
-      # - DOWNLOADCLIENT=true
-      - REINSTALL=true
-      - SAVECONFIG=true
-      - REPOVISI=public # public / private
-      - GITREPO=github # github / gitlab
-      - REPOURL="https://github.com/Anankke/SSPanel-Uim.git"
-      - BRANCH=2023.3
+      # sspanel 配置
+      - APPNAME=${APPNAME}
+      - BASEURL="${PROTOCOL}://${DOMAIN}"
+      - APPKEY=${APPKEY}
+      - MUKEY=${MUKEY}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - MAXMIND_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
+      - ADMIN_MAIL=${ADMIN_MAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      # 构建配置
+      - DBMODE=${DBMODE}
+      - REINSTALL=${REINSTALL}
+      - REPOVISI=${REPOVISI}
+      - GITREPO=${GITREPO}
+      - REPOURL=${REPOURL}
+      - BRANCH=${BRANCH}
+      - TOKEN=${TOKEN}
+      - DOWNLOADCLIENT=${DOWNLOADCLIENT}
+    depends_on:
+      - mariadb
+      - nginx
     volumes:
-      - '/home/dockerApps/Data/nginx/www/SSPanel-Uim:/app'
-      - '/home/dockerApps/Data/sspanel/config:/opt/bitnami/php/etc'
-      - '/home/dockerApps/Data/sspanel/backup:/opt/bitnami/backup'
+      - nginx_www/sspanel:/app
     restart: always
     networks:
-      - extnetwork
+      - sspanel_network
 
-networks:
-  extnetwork:
-    external: true
+  mariadb:
+    image: docker.io/bitnami/mariadb:10.9
+    # 需要外网访问，请取消注释
+    # ports:
+    #   - '${DB_PORT}:3306'
+    volumes:
+      - 'mariadb_data:/bitnami/mariadb'
+    environment:
+      # ALLOW_EMPTY_PASSWORD is recommended only for development.
+      - ALLOW_EMPTY_PASSWORD=yes
+      - MARIADB_USER=${DB_USERNAME}
+      - MARIADB_PASSWORD=${DB_PASSWORD}
+      - MARIADB_DATABASE=${DB_DATABASE}
+      - MARIADB_CHARACTER_SET=${DB_CHARACTER_SET}
+      - MARIADB_COLLATE=${DB_COLLATE}
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', '/opt/bitnami/scripts/mariadb/healthcheck.sh']
+      interval: 15s
+      timeout: 5s
+      retries: 6
+    networks:
+      - sspanel_network
 
+volumes:
+  mariadb_data:
+    driver: local
+  nginx_config:
+    driver: local
+  nginx_www:
+    driver: local
+  nginx_log:
+    driver: local
+
+ app_net:
+    sspanel_network:
+      driver: default
+      config:
+        - subnet: "172.16.238.0/24"
