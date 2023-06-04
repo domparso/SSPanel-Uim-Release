@@ -19,3 +19,5 @@
 	chmod +x ./install
 	./install
 
+## 测试
+	因为环境问题，只测试了debian
