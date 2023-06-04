@@ -25,6 +25,7 @@ if [[ "$REINSTALL" != "false" ]]; then
 		rm -rf $BACKUPPATH/*
 		cp -r config $BACKUPPATH/
 		cp -r storage $BACKUPPATH/
+		cp -r public/clients $BACKUPPATH/
 	fi
 	rm -rf *
 	# 删除隐藏文件
@@ -64,6 +65,7 @@ if [[ "`ls -A ${APPHOME}`" = "" ]]; then
 		rm -rf ./config
 		cp -r $BACKUPPATH/config ./
 		cp -r $BACKUPPATH/storage/GeoLite2* ./storage/
+		cp -r $BACKUPPATH/client ./public/
 	else
 		# write config
 		echo "写入配置..."

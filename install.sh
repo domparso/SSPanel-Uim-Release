@@ -11,6 +11,19 @@ Font_SkyBlue="\033[36m"
 Font_White="\033[37m"
 Font_Suffix="\033[0m"
 
+ENV_FILE=docker/.env
+ENV_PARAMS=
+
+# APP在宿主机上目录
+NGINX_WWW_PATH=
+NGINX_CONF_PATH=
+NGINX_SSL_PATH=
+
+APP_HOME=
+DOMAIN=
+EMAIL=
+PROTOCOL=
+
 checkOS() {
     ifTermux=$(echo $PWD | grep termux)
     ifMacOS=$(uname -a | grep Darwin)
@@ -45,87 +58,128 @@ checkOS() {
 checkDependencies() {
 
     # os_detail=$(cat /etc/os-release 2> /dev/null)
+	
+	if [ "$is_debian" == 1 ]; then
+		echo -e "${Font_Green} update ${Font_Suffix}"
+		$InstallMethod update >/dev/null 2>&1
+	elif [ "$is_redhat" == 1 ]; then
+		echo -e "${Font_Green} update ${Font_Suffix}"
+		if [[ "$os_version" -gt 7 ]]; then
+			$InstallMethod makecache >/dev/null 2>&1
+		else
+			$InstallMethod makecache >/dev/null 2>&1
+		fi
+	elif [ "$is_termux" == 1 ]; then
+		echo -e "${Font_Green} update ${Font_Suffix}"
+		$InstallMethod update -y >/dev/null 2>&1
+	elif [ "$is_macos" == 1 ]; then
+		echo -e "${Font_Green} update ${Font_Suffix}"
+	fi
 
-    if ! command -v python &>/dev/null; then
-        if command -v python3 &>/dev/null; then
-            alias python="python3"
-        else
-            if [ "$is_debian" == 1 ]; then
-                echo -e "${Font_Green}Installing python${Font_Suffix}"
-                $InstallMethod update >/dev/null 2>&1
-                $InstallMethod install python curl -y >/dev/null 2>&1
-                $InstallMethod install python -y >/dev/null 2>&1
-            elif [ "$is_redhat" == 1 ]; then
-                echo -e "${Font_Green}Installing python${Font_Suffix}"
-                if [[ "$os_version" -gt 7 ]]; then
-                    $InstallMethod makecache >/dev/null 2>&1
-                    $InstallMethod install python3 curl -y >/dev/null 2>&1
-                    alias python="python3"
-                else
-                    $InstallMethod makecache >/dev/null 2>&1
-                    $InstallMethod install python curl -y >/dev/null 2>&1
-                fi
-
-            elif [ "$is_termux" == 1 ]; then
-                echo -e "${Font_Green}Installing python${Font_Suffix}"
-                $InstallMethod update -y >/dev/null 2>&1
-                $InstallMethod install python curl -y >/dev/null 2>&1
-
-            elif [ "$is_macos" == 1 ]; then
-                echo -e "${Font_Green}Installing python${Font_Suffix}"
-                $InstallMethod install python curl
-            fi
-        fi
-    fi
-
-    if ! command -v dig &>/dev/null; then
-        if [ "$is_debian" == 1 ]; then
-            echo -e "${Font_Green}Installing dnsutils${Font_Suffix}"
-            $InstallMethod update >/dev/null 2>&1
-            $InstallMethod install dnsutils -y >/dev/null 2>&1
-        elif [ "$is_redhat" == 1 ]; then
-            echo -e "${Font_Green}Installing bind-utils${Font_Suffix}"
-            $InstallMethod makecache >/dev/null 2>&1
-            $InstallMethod install bind-utils -y >/dev/null 2>&1
-        elif [ "$is_termux" == 1 ]; then
-            echo -e "${Font_Green}Installing dnsutils${Font_Suffix}"
-            $InstallMethod update -y >/dev/null 2>&1
-            $InstallMethod install dnsutils -y >/dev/null 2>&1
-        elif [ "$is_macos" == 1 ]; then
-            echo -e "${Font_Green}Installing bind${Font_Suffix}"
-            $InstallMethod install bind
-        fi
-    fi
-
-    if [ "$is_macos" == 1 ]; then
-        if ! command -v md5sum &>/dev/null; then
-            echo -e "${Font_Green}Installing md5sha1sum${Font_Suffix}"
-            $InstallMethod install md5sha1sum
-        fi
-    fi
+	if [ "$is_debian" == 1 ]; then
+		echo -e "${Font_Green}Installing python3-utils ${Font_Suffix}"
+		$InstallMethod install python3 python3-dev python3-pip curl -y >/dev/null 2>&1
+	elif [ "$is_redhat" == 1 ]; then
+		echo -e "${Font_Green}Installing python3-utils ${Font_Suffix}"
+		$InstallMethod install python3 python3-dev python3-pip curl -y >/dev/null 2>&1
+	elif [ "$is_termux" == 1 ]; then
+		echo -e "${Font_Green}Installing python3 ${Font_Suffix}"
+		$InstallMethod install python3 python3-dev python3-pip curl -y >/dev/null 2>&1
+	elif [ "$is_macos" == 1 ]; then
+		echo -e "${Font_Green}Installing python3 ${Font_Suffix}"
+		$InstallMethod install python python-dev python-pip curl
+	fi
 }
 
-getCer() {
-	curl https://get.acme.sh | sh -s email=my@example.com |
-	&& acme.sh --issue --standalone -d example.com
+checkENVFile() {
+	local s='[[:space:]]*' s1='[[:space:]]' w='[a-zA-Z0-9_:-]*' fs=$(echo @|tr @ '\034')
+	result=`sed -ne "s|^\($s\):|\1|" \
+		-e "s|^\($s\)\($w\)$s=$s[\"']\(.*\)[\"']$s\$|\1$fs\2$fs\3|p" \
+		-e "s|^\($s\)\($w\)$s=$s\"{\($w\)}$s\"|\1$fs\2$fs\3|p" $1 |
+	awk -F$fs '{
+		indent = length($1)/2;
+		vname[indent] = $2;
+		for (i in vname) {
+			if (i > indent) {
+				delete vname[i]
+			}
+		}
+		# printf("%s=\"%s\"\n", $2, $3)
+		printf("%s\n", $3)
+	}'`
 	
+	ENV_PARAMS=(${result// /})
 }
 
 install() {
-	curl -fsSL https://get.docker.com/ | sh \
-	&& systemctl start docker \
-	&& python3 -m pip install docker-compose \
+	if ! command -v docker &>/dev/null; then
+		curl -fsSL https://get.docker.com/ | sh \
+		&& systemctl start docker
+	fi
+	
+	if ! command -v docker-compose &>/dev/null; then
+		python3 -m pip install docker-compose
+	fi
+	
+	checkENVFile ${ENV_FILE}
+	for i in ${ENV_PARAMS[@]};
+	do
+		tmp=$(echo ${i} | sed 's/{//g' | sed 's/}//g')
+		arr1=(`echo $tmp | tr ':-' ' '`)
+#		echo ${#arr1[@]} ${arr1[@]} 
+#		echo ${arr1[0]} ${arr1[1]}
+		if [[ "${arr1[0]}" =~ "NGINX_WWW_PATH" ]]; then
+			NGINX_WWW_PATH=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "NGINX_CONF_PATH" ]]; then
+			NGINX_CONF_PATH=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "NGINX_SSL_PATH" ]]; then
+			NGINX_SSL_PATH=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "APP_HOME" ]]; then
+			APP_HOME=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "DOMAIN" ]]; then
+			DOMAIN=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "ADMIN_MAIL" ]]; then
+			EMAIL=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "PROTOCOL" ]]; then
+			PROTOCOL=${arr1[1]}
+		fi
+	done
+	
+	if [[ ! -d ${NGINX_CONF_PATH} ]]; then
+		mkdir -p ${NGINX_CONF_PATH}
+	fi
+	
+	if [[ ! -d ${NGINX_SSL_PATH} ]]; then
+		mkdir -p ${NGINX_SSL_PATH}
+	fi
+	
+	if [[ ! -d ${NGINX_WWW_PATH}/${APP_PATH} ]]; then
+		mkdir -p ${NGINX_WWW_PATH}/${APP_PATH}
+	fi
+	
+	if [[ "$PROTOCOL" = "https" ]]; then
+		if [[ -d ${NGINX_SSL_PATH} ]]; then
+			rm -rf ${NGINX_SSL_PATH}
+		fi
+		
+		curl https://get.acme.sh | sh -s email=$EMAIL \
+		&& acme.sh --issue --standalone -d $DOMAIN \
+		ln -s /root/.acme.sh/${DOMAIN}_ecc ${NGINX_SSL_PATH} \
+		&& sed -i "s/example.com/$DOMAIN/g" docker/443.conf \
+		&& cp docker/443.conf ${NGINX_CONF_PATH}/default.conf
+	else
+		sed -i -e "s/example.com/$DOMAIN/g" docker/80.conf \
+		&& cp docker/80.conf ${NGINX_CONF_PATH}/default.conf
+	fi
+	
+	cd docker \
 	&& docker-compose up -d
-	
-	
 }
 
 main() {
 	checkOS
 	checkDependencies
 	install
-	# getCer
-
 }
 
 main
