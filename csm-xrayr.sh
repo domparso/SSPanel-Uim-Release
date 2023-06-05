@@ -502,12 +502,12 @@ OpenAiUnlockTest()
 OpenAiUnlockTest1(){
 	condition="Sorry, you have been blocked"
 	result=$(curl -s https://chat.openai.com/auth/login)
-	if [[ $result == *$condition* ]]; then
-		echo -n -e "\r support OpenAI:\t\t\t${Font_Green}Yes${Font_Suffix}\n"
-		modifyJsonTemplate 'OpenAI_result' 'Yes'
-	else
+	if [[ $result =~ *$condition* ]]; then
 		echo -n -e "\r support OpenAI:\t\t\t${Font_Green}No${Font_Suffix}\n"
 		modifyJsonTemplate 'OpenAI_result' 'No'
+	else
+		echo -n -e "\r support OpenAI:\t\t\t${Font_Green}Yes${Font_Suffix}\n"
+		modifyJsonTemplate 'OpenAI_result' 'Yes'
 	fi
 
 }
