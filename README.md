@@ -14,6 +14,14 @@
 	cd SSPanel-Uim-Release
 	修改 dicker/.env 文件
 
+安装SSPanel的源码仓库可以选择默认的，也可以Anankke/SSPanel-Uim的源码仓库，修改"REPOURL"。
+
+初次安装，建议只修改"SSPanel配置"、"MariaDB配置"、"管理员账户"下的参数，其他保持默认。
+
+Mariadb默认是不支持外部访问，如果需要，请将docker/docker-compose.yml的Mariadb服务 ports选项 取消注释。
+
+	ports:
+	  - '${DB_PORT}:3306'
 
 ## 第三步
 	chmod +x ./install
