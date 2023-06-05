@@ -28,6 +28,9 @@ Mariadb默认是不支持外部访问，如果需要，请将docker/docker-compo
 	chmod +x ./install
 	./install
 
+## SSL证书
+使用 acmesh-official/acme.sh 获取证书
+
 ## 测试
 	因为环境问题，只测试了debian
 

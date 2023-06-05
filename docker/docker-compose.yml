@@ -38,6 +38,7 @@ services:
       - nginx
     volumes:
       - ${NGINX_WWW_PATH}/${APP_HOME}:/app
+      - sspanel_config:/opt/bitnami/backup
     restart: always
     networks:
       - sspanel_network
@@ -83,6 +84,8 @@ services:
 
 volumes:
   mariadb_data:
+    driver: local
+  sspanel_config:
     driver: local
 
 networks:
