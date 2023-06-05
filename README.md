@@ -14,7 +14,8 @@
 	cd SSPanel-Uim-Release
 	修改 dicker/.env 文件
 
-安装SSPanel的源码仓库可以选择默认的，也可以Anankke/SSPanel-Uim的源码仓库，修改"REPOURL"。
+安装SSPanel的源码仓库可以选择默认的，也可以使用Anankke/SSPanel-Uim的源码仓库，请修改 docker/.env中的"REPOURL"。
+
 
 初次安装，建议只修改"SSPanel配置"、"MariaDB配置"、"管理员账户"下的参数，其他保持默认。
 
