@@ -12,7 +12,7 @@
 
 ## 第二步
 	cd SSPanel-Uim-Release
-	修改 dicker/.env 文件
+	修改 docker/.env 文件
 
 安装SSPanel的源码仓库可以选择默认的，也可以使用Anankke/SSPanel-Uim的源码仓库，请修改 docker/.env中的"REPOURL"。
 
