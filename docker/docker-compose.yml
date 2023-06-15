@@ -53,6 +53,7 @@ services:
     volumes:
      - ${NGINX_WWW_PATH}:/usr/share/nginx/html
      - ${NGINX_CONF_PATH}:/etc/nginx/conf.d
+     - ${NGINX_LOG_PATH}:/var/log/nginx
      - ${NGINX_SSL_PATH}:/etc/nginx/ssl
     networks:
       - sspanel_network
