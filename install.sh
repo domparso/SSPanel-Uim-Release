@@ -17,6 +17,7 @@ ENV_PARAMS=
 # APP在宿主机上目录
 NGINX_WWW_PATH=
 NGINX_CONF_PATH=
+NGINX_LOG_PATH=
 NGINX_SSL_PATH=
 
 APP_HOME=
@@ -139,6 +140,8 @@ install() {
 			NGINX_WWW_PATH=${arr1[1]}
 		elif [[ "${arr1[0]}" =~ "NGINX_CONF_PATH" ]]; then
 			NGINX_CONF_PATH=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "NGINX_LOG_PATH" ]]; then
+			NGINX_LOG_PATH=${arr1[1]}
 		elif [[ "${arr1[0]}" =~ "NGINX_SSL_PATH" ]]; then
 			NGINX_SSL_PATH=${arr1[1]}
 		elif [[ "${arr1[0]}" =~ "APP_HOME" ]]; then
@@ -154,6 +157,10 @@ install() {
 	
 	if [[ ! -d ${NGINX_CONF_PATH} ]]; then
 		mkdir -p ${NGINX_CONF_PATH}
+	fi
+	
+	if [[ ! -d ${NGINX_LOG_PATH} ]]; then
+		mkdir -p ${NGINX_LOG_PATH}
 	fi
 	
 	if [[ ! -d ${NGINX_SSL_PATH} ]]; then
