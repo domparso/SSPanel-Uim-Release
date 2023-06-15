@@ -111,6 +111,13 @@ checkENVFile() {
 	ENV_PARAMS=(${result// /})
 }
 
+fail2ban(){
+	apt-get install fail2ban \
+	&& mv /etc/fail2ban/jail.conf jail.conf.bak \
+	&& cp jail.conf /etc/fail2ban/jail.conf \
+	&& systemctl restart fail2ban
+}
+
 install() {
 	if ! command -v docker &>/dev/null; then
 		curl -fsSL https://get.docker.com/ | sh \
@@ -153,8 +160,8 @@ install() {
 		mkdir -p ${NGINX_SSL_PATH}
 	fi
 	
-	if [[ ! -d ${NGINX_WWW_PATH}/${APP_PATH} ]]; then
-		mkdir -p ${NGINX_WWW_PATH}/${APP_PATH}
+	if [[ ! -d ${NGINX_WWW_PATH}/${APP_HOME} ]]; then
+		mkdir -p ${NGINX_WWW_PATH}/${APP_HOME}
 	fi
 	
 	if [[ "$PROTOCOL" = "https" ]]; then
@@ -180,6 +187,7 @@ main() {
 	checkOS
 	checkDependencies
 	install
+	# fail2ban
 }
 
 main
