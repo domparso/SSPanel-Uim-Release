@@ -121,21 +121,16 @@ fail2ban() {
 }
 
 getCer() {
-	if [[ "$PROTOCOL" = "https" ]]; then
-		if [[ -d ${NGINX_SSL_PATH} ]]; then
-			rm -rf ${NGINX_SSL_PATH}
-		fi
-		
-		curl https://get.acme.sh | sh -s email=$EMAIL \
-		&& cd /root/.acme.sh \
-		&& ./acme.sh --issue --standalone -d $DOMAIN \
-		&& ln -s /root/.acme.sh/${DOMAIN}_ecc ${NGINX_SSL_PATH} \
-		&& sed -i "s/example.com/$DOMAIN/g" docker/443.conf \
-		&& cp docker/443.conf ${NGINX_CONF_PATH}/default.conf
-	else
-		sed -i -e "s/example.com/$DOMAIN/g" docker/80.conf \
-		&& cp docker/80.conf ${NGINX_CONF_PATH}/default.conf
+	if [[ -d ${NGINX_SSL_PATH} ]]; then
+		rm -rf ${NGINX_SSL_PATH}
 	fi
+	
+	curl https://get.acme.sh | sh -s email=${EMAIL} \
+	&& cd /root/.acme.sh \
+	&& ./acme.sh --issue --standalone -d ${DOMAIN} \
+	&& ln -s /root/.acme.sh/${DOMAIN}_ecc ${NGINX_SSL_PATH} \
+	&& sed -i "s/example.com/${DOMAIN}/g" ${CUR_DIR}/docker/443.conf \
+	&& cp ${CUR_DIR}/docker/443.conf ${NGINX_CONF_PATH}/default.conf
 }
 
 install() {
@@ -182,17 +177,18 @@ install() {
 		mkdir -p ${NGINX_LOG_PATH}
 	fi
 	
-	if [[ ! -d ${NGINX_SSL_PATH} ]]; then
-		mkdir -p ${NGINX_SSL_PATH}
-	fi
-	
 	if [[ ! -d ${NGINX_WWW_PATH}/${APP_HOME} ]]; then
 		mkdir -p ${NGINX_WWW_PATH}/${APP_HOME}
 	fi
 	
-	getCer
+	if [[ "$PROTOCOL" = "https" ]]; then
+		getCer
+	else
+		sed -i -e "s/example.com/$DOMAIN/g" docker/80.conf \
+		&& cp docker/80.conf ${NGINX_CONF_PATH}/default.conf
+	fi
 	
-	cd $CUR_DIR/docker \
+	cd ${CUR_DIR}/docker \
 	&& docker-compose up -d
 }
 
