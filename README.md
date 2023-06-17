@@ -25,8 +25,8 @@ Mariadb默认是不支持外部访问，如果需要，请将docker/docker-compo
 	  - '${DB_PORT}:3306'
 
 ## 第三步
-	chmod +x ./install
-	./install
+	chmod +x ./install.sh
+	./install.sh
 
 ## SSL证书
 使用 acmesh-official/acme.sh 获取证书
