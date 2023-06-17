@@ -129,7 +129,7 @@ getCer() {
 		curl https://get.acme.sh | sh -s email=$EMAIL \
 		&& cd /root/.acme.sh \
 		&& ./acme.sh --issue --standalone -d $DOMAIN \
-		ln -s /root/.acme.sh/${DOMAIN}_ecc ${NGINX_SSL_PATH} \
+		&& ln -s /root/.acme.sh/${DOMAIN}_ecc ${NGINX_SSL_PATH} \
 		&& sed -i "s/example.com/$DOMAIN/g" docker/443.conf \
 		&& cp docker/443.conf ${NGINX_CONF_PATH}/default.conf
 	else
