@@ -112,11 +112,29 @@ checkENVFile() {
 	ENV_PARAMS=(${result// /})
 }
 
-fail2ban(){
+fail2ban() {
 	apt-get install fail2ban \
 	&& mv /etc/fail2ban/jail.conf jail.conf.bak \
 	&& cp jail.conf /etc/fail2ban/jail.conf \
 	&& systemctl restart fail2ban
+}
+
+getCer() {
+	if [[ "$PROTOCOL" = "https" ]]; then
+		if [[ -d ${NGINX_SSL_PATH} ]]; then
+			rm -rf ${NGINX_SSL_PATH}
+		fi
+		
+		curl https://get.acme.sh | sh -s email=$EMAIL \
+		cd .acme.sh \
+		&& acme.sh --issue --standalone -d $DOMAIN \
+		ln -s /root/.acme.sh/${DOMAIN}_ecc ${NGINX_SSL_PATH} \
+		&& sed -i "s/example.com/$DOMAIN/g" docker/443.conf \
+		&& cp docker/443.conf ${NGINX_CONF_PATH}/default.conf
+	else
+		sed -i -e "s/example.com/$DOMAIN/g" docker/80.conf \
+		&& cp docker/80.conf ${NGINX_CONF_PATH}/default.conf
+	fi
 }
 
 install() {
@@ -171,20 +189,7 @@ install() {
 		mkdir -p ${NGINX_WWW_PATH}/${APP_HOME}
 	fi
 	
-	if [[ "$PROTOCOL" = "https" ]]; then
-		if [[ -d ${NGINX_SSL_PATH} ]]; then
-			rm -rf ${NGINX_SSL_PATH}
-		fi
-		
-		curl https://get.acme.sh | sh -s email=$EMAIL \
-		&& acme.sh --issue --standalone -d $DOMAIN \
-		ln -s /root/.acme.sh/${DOMAIN}_ecc ${NGINX_SSL_PATH} \
-		&& sed -i "s/example.com/$DOMAIN/g" docker/443.conf \
-		&& cp docker/443.conf ${NGINX_CONF_PATH}/default.conf
-	else
-		sed -i -e "s/example.com/$DOMAIN/g" docker/80.conf \
-		&& cp docker/80.conf ${NGINX_CONF_PATH}/default.conf
-	fi
+	getCer
 	
 	cd docker \
 	&& docker-compose up -d
