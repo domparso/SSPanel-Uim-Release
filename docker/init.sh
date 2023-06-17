@@ -134,7 +134,7 @@ if [[ "`ls -A ${APPHOME}`" = "" ]]; then
 	fi
 
 	# 下载客户端
-	if [[ -n $DOWNLOADCLIENT ]]; then
+	if [[ -n $DOWNLOADCLIENT = "true" ]]; then
 		php xcat ClientDownload
 	fi
 else
