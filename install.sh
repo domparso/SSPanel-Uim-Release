@@ -169,6 +169,8 @@ install() {
 		fi
 	done
 	
+	clear
+	
 	if [[ ! -d ${NGINX_CONF_PATH} ]]; then
 		mkdir -p ${NGINX_CONF_PATH}
 	fi
@@ -190,6 +192,14 @@ install() {
 	
 	cd ${CUR_DIR}/docker \
 	&& docker-compose up -d
+}
+
+clear() {
+	rm -rf /root/.acme.sh
+	rm -rf ${NGINX_CONF_PATH}
+	rm -rf ${NGINX_LOG_PATH}
+	rm -rf ${NGINX_WWW_PATH}
+	rm -rf ${NGINX_SSL_PATH}
 }
 
 main() {
