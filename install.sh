@@ -21,6 +21,7 @@ NGINX_CONF_PATH=
 NGINX_LOG_PATH=
 NGINX_SSL_PATH=
 
+REINSTALL=
 APP_HOME=
 DOMAIN=
 EMAIL=
@@ -143,14 +144,16 @@ install() {
 		python3 -m pip install docker-compose
 	fi
 	
-	checkENVFile ${ENV_FILE}
+	checkENVFile ${CUR_DIR}/${ENV_FILE}
 	for i in ${ENV_PARAMS[@]};
 	do
 		tmp=$(echo ${i} | sed 's/{//g' | sed 's/}//g')
 		arr1=(`echo $tmp | tr ':-' ' '`)
 #		echo ${#arr1[@]} ${arr1[@]} 
 #		echo ${arr1[0]} ${arr1[1]}
-		if [[ "${arr1[0]}" =~ "NGINX_WWW_PATH" ]]; then
+		if [[ "${arr1[0]}" =~ "REINSTALL" ]]; then
+			REINSTALL=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "NGINX_WWW_PATH" ]]; then
 			NGINX_WWW_PATH=${arr1[1]}
 		elif [[ "${arr1[0]}" =~ "NGINX_CONF_PATH" ]]; then
 			NGINX_CONF_PATH=${arr1[1]}
@@ -169,7 +172,9 @@ install() {
 		fi
 	done
 	
-	clear
+	if [[ ${REINSTALL} = "false" ]]; then
+		clear
+	fi
 	
 	if [[ ! -d ${NGINX_CONF_PATH} ]]; then
 		mkdir -p ${NGINX_CONF_PATH}
