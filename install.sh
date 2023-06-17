@@ -11,6 +11,7 @@ Font_SkyBlue="\033[36m"
 Font_White="\033[37m"
 Font_Suffix="\033[0m"
 
+CUR_DIR=$(cd "$(dirname "$0")";pwd)
 ENV_FILE=docker/.env
 ENV_PARAMS=
 
@@ -127,7 +128,7 @@ getCer() {
 		
 		curl https://get.acme.sh | sh -s email=$EMAIL \
 		&& cd /root/.acme.sh \
-		&& acme.sh --issue --standalone -d $DOMAIN \
+		&& ./acme.sh --issue --standalone -d $DOMAIN \
 		ln -s /root/.acme.sh/${DOMAIN}_ecc ${NGINX_SSL_PATH} \
 		&& sed -i "s/example.com/$DOMAIN/g" docker/443.conf \
 		&& cp docker/443.conf ${NGINX_CONF_PATH}/default.conf
@@ -191,7 +192,7 @@ install() {
 	
 	getCer
 	
-	cd docker \
+	cd $CUR_DIR/docker \
 	&& docker-compose up -d
 }
 
