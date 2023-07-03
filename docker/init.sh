@@ -19,6 +19,8 @@ fi
 
 # 创建网站目录
 
+cd $APPHOME
+
 if [[ "$REINSTALL" != "false" ]]; then
 	# 备份
 	if [[ "$REINSTALL" == "save" ]]; then
@@ -33,7 +35,6 @@ if [[ "$REINSTALL" != "false" ]]; then
 	find /app -type f -name .\* | xargs rm -rf 
 fi
 
-cd $APPHOME
 if [[ "`ls -A ${APPHOME}`" = "" ]]; then 
 	echo "创建网站目录"
 	
