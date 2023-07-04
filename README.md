@@ -38,3 +38,7 @@ Mariadb默认是不支持外部访问，如果需要，请将docker/docker-compo
 	curl -LsO https://raw.githubusercontent.com/domparso/SSPanel-Uim-Release/master/csm-xrayr.sh \
 	&& chmod +x csm-xrayr.sh \
 	&& ./csm-xrayr.sh
+
+## fail2ban 安装 （可选）用于SSH与nginx的防护
+	chmod +x ./install-fail2ban.sh
+	./install-fail2ban.sh
