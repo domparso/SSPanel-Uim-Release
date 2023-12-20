@@ -1,9 +1,9 @@
 #!/bin/bash
 
 
-CUR_DIR=$(cd "$(dirname "$0")";pwd)/jail
-
-NGINX_LOG_PATH=/usr/share/nginx/LOG
+CUR_DIR=$(cd "$(dirname "$0")";pwd)
+ENV_FILE=docker/.env
+SSHD_PORT=22
 
 checkOS() {
     ifTermux=$(echo $PWD | grep termux)
@@ -72,14 +72,70 @@ checkDependencies() {
 	fi
 }
 
+checkENVFile() {
+	local s='[[:space:]]*' s1='[[:space:]]' w='[a-zA-Z0-9_:-]*' fs=$(echo @|tr @ '\034')
+	result=`sed -ne "s|^\($s\):|\1|" \
+		-e "s|^\($s\)\($w\)$s=$s[\"']\(.*\)[\"']$s\$|\1$fs\2$fs\3|p" \
+		-e "s|^\($s\)\($w\)$s=$s\"{\($w\)}$s\"|\1$fs\2$fs\3|p" $1 |
+	awk -F$fs '{
+		indent = length($1)/2;
+		vname[indent] = $2;
+		for (i in vname) {
+			if (i > indent) {
+				delete vname[i]
+			}
+		}
+		# printf("%s=\"%s\"\n", $2, $3)
+		printf("%s\n", $3)
+	}'`
+
+	ENV_PARAMS=(${result// /})
+}
+
 install() {
 
-	if [[ "${NGINX_LOG_PATH}" = "/usr/share/nginx/logs" ]]; then
-		echo sed -i -e "s#/usr/share/nginx/logs#${NGINX_LOG_PATH}#g" ${CUR_DIR}/jail.d/nginx.conf
+	checkENVFile ${CUR_DIR}/${ENV_FILE}
+	for i in ${ENV_PARAMS[@]};
+	do
+		tmp=$(echo ${i} | sed 's/{//g' | sed 's/}//g')
+		arr1=(`echo $tmp | tr ':-' ' '`)
+	#	echo ${#arr1[@]} ${arr1[@]}
+	#		echo ${arr1[0]} ${arr1[1]}
+		if [[ "${arr1[0]}" =~ "REINSTALL" ]]; then
+			REINSTALL=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "DB_DATA_PATH" ]]; then
+			DB_DATA_PATH=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "DB_LOG_PATH" ]]; then
+			DB_LOG_PATH=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "NGINX_LOG_PATH" ]]; then
+			NGINX_LOG_PATH=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "NGINX_SSL_PATH" ]]; then
+			NGINX_SSL_PATH=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "APP_HOME" ]]; then
+			APP_HOME=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "DOMAIN" ]]; then
+			DOMAIN=${arr1[1]}
+		fi
+	done
+
+	if [[ -n "${SSHD_PORT}" && "${SSHD_PORT}" != "22" ]]; then
+		echo sed -i -e "s#port     = ssh#port     = ${SSHD_PORT}#g" ${CUR_DIR}/jail/jail.conf
 	fi
 
-	cp ${CUR_DIR}/jail.d/* /etc/fail2ban/jail.d
-	cp ${CUR_DIR}/filter.d/* /etc/fail2ban/filter.d
+	cp ${CUR_DIR}/jail/jail.conf /etc/fail2ban/jail.local
+
+	if [[ "${NGINX_LOG_PATH}" != "/var/log/nginx/logs" ]]; then
+		echo sed -i -e "s#/var/log/nginx/logs#${NGINX_LOG_PATH}#g" ${CUR_DIR}/jail/jail.d/nginx.conf
+	fi
+
+	if [[ "${DB_LOG_PATH}" != "/var/log/mysql" ]]; then
+		echo sed -i -e "s#/var/log/mysql#${DB_LOG_PATH}#g" ${CUR_DIR}/jail/jail.d/mysqld.conf
+	fi
+
+	cp ${CUR_DIR}/jail/jail.d/* /etc/fail2ban/jail.d
+	cp ${CUR_DIR}/jail/filter.d/* /etc/fail2ban/filter.d
+	cp ${CUR_DIR}/jail/action.d/* /etc/fail2ban/action.d
+
 	
 	if command -v systemctl &>/dev/null; then
 		systemctl restart fail2ban

@@ -27,6 +27,12 @@ DOMAIN=
 EMAIL=
 PROTOCOL=
 
+ACME_PATH=~/.acme.sh
+
+resolver=8.8.8.8
+
+TZ=Asia/Shanghai
+
 checkOS() {
     ifTermux=$(echo $PWD | grep termux)
     ifMacOS=$(uname -a | grep Darwin)
@@ -81,16 +87,16 @@ checkDependencies() {
 
 	if [ "$is_debian" == 1 ]; then
 		echo -e "${Font_Green}Installing python3-utils ${Font_Suffix}"
-		$InstallMethod install python3 python3-dev python3-pip curl -y >/dev/null 2>&1
+		$InstallMethod install python3 python3-dev python3-pip curl socat -y >/dev/null 2>&1
 	elif [ "$is_redhat" == 1 ]; then
 		echo -e "${Font_Green}Installing python3-utils ${Font_Suffix}"
-		$InstallMethod install python3 python3-dev python3-pip curl -y >/dev/null 2>&1
+		$InstallMethod install python3 python3-dev python3-pip curl socat -y >/dev/null 2>&1
 	elif [ "$is_termux" == 1 ]; then
 		echo -e "${Font_Green}Installing python3 ${Font_Suffix}"
-		$InstallMethod install python3 python3-dev python3-pip curl -y >/dev/null 2>&1
+		$InstallMethod install python3 python3-dev python3-pip curl socat -y >/dev/null 2>&1
 	elif [ "$is_macos" == 1 ]; then
 		echo -e "${Font_Green}Installing python3 ${Font_Suffix}"
-		$InstallMethod install python python-dev python-pip curl
+		$InstallMethod install python python-dev python-pip curl socat
 	fi
 }
 
@@ -121,22 +127,73 @@ fail2ban() {
 	&& systemctl restart fail2ban
 }
 
+isDirEmpty() {
+	if [[ "$(ls -A $DIR)" ]]; then
+		return true
+	else
+		return false
+fi
+}
+
 getCer() {
 	if [[ -d ${NGINX_SSL_PATH} ]]; then
 		rm -rf ${NGINX_SSL_PATH}
 	fi
 	
-	curl https://get.acme.sh | sh -s email=${EMAIL} \
-	&& cd /root/.acme.sh \
-	&& ./acme.sh --issue --standalone -d ${DOMAIN} \
+	if [[ -d ~/.acme.sh ]]; then
+		cd /root/.acme.sh
+		
+		if [[ -d ${DOMAIN} ]]; then
+			mv ${DOMAIN}_ecc ${DOMAIN}_ecc.bak
+		fi
+
+		./acme.sh --register-account  --server letsencrypt -m -d ${EMAIL} \
+		&& ./acme.sh --issue --standalone --server letsencrypt -d -d ${DOMAIN} --debug 2 \
+		# && ./acme.sh --issue --standalone -d ${DOMAIN} --debug 2
+		&& ln -s /root/.acme.sh/${DOMAIN}_ecc ${NGINX_SSL_PATH} \
+		&& sed -i "s/example.com/${DOMAIN}/g" ${CUR_DIR}/docker/443.conf \
+		&& cp ${CUR_DIR}/docker/443.conf ${NGINX_CONF_PATH}/sspanel.conf
+	else
+		curl https://get.acme.sh | sh -s email=${EMAIL} \
+		&& cd /root/.acme.sh \
+		&& ./acme.sh --register-account  --server letsencrypt -m -d ${EMAIL} \
+		&& ./acme.sh --issue --standalone --server letsencrypt -d -d ${DOMAIN} --debug 2 \
+		# && ./acme.sh --issue --standalone -d ${DOMAIN} --debug 2
+		&& ln -s /root/.acme.sh/${DOMAIN}_ecc ${NGINX_SSL_PATH} \
+		&& sed -i "s/example.com/${DOMAIN}/g" ${CUR_DIR}/docker/443.conf \
+		&& cp ${CUR_DIR}/docker/443.conf ${NGINX_CONF_PATH}/sspanel.conf
+	fi
+}
+
+getCerDocker() {
+	if [[ -d ${NGINX_SSL_PATH} ]]; then
+		rm -rf ${NGINX_SSL_PATH}
+	fi
+	
+	docker pull neilpang/acme.sh
+	
+	docker run \
+	--rm \
+	-it \
+	-v "/root/.acme.sh":/acme.sh \
+	neilpang/acme.sh --register-account -m ${EMAIL}
+	
+	docker pull neilpang/acme.sh \
+	&& docker run \
+	--rm \
+	-it \
+	-v ${ACME_PATH}:/acme.sh \
+	--net=host \
+	neilpang/acme.sh  --issue --standalone -d ${DOMAIN} --debug 2 \
 	&& ln -s /root/.acme.sh/${DOMAIN}_ecc ${NGINX_SSL_PATH} \
 	&& sed -i "s/example.com/${DOMAIN}/g" ${CUR_DIR}/docker/443.conf \
-	&& cp ${CUR_DIR}/docker/443.conf ${NGINX_CONF_PATH}/default.conf
+	&& cp ${CUR_DIR}/docker/443.conf ${NGINX_CONF_PATH}/sspanel.conf
 }
 
 install() {
 	if ! command -v docker &>/dev/null; then
 		curl -fsSL https://get.docker.com/ | sh \
+		&& echo '{"data-root": "/home/docker", "dns": ["8.8.8.8","1.1.1.1"]}' >> /etc/docker/daemon.json \
 		&& systemctl start docker
 	fi
 	
@@ -153,10 +210,10 @@ install() {
 #		echo ${arr1[0]} ${arr1[1]}
 		if [[ "${arr1[0]}" =~ "REINSTALL" ]]; then
 			REINSTALL=${arr1[1]}
-		elif [[ "${arr1[0]}" =~ "NGINX_WWW_PATH" ]]; then
-			NGINX_WWW_PATH=${arr1[1]}
-		elif [[ "${arr1[0]}" =~ "NGINX_CONF_PATH" ]]; then
-			NGINX_CONF_PATH=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "DB_DATA_PATH" ]]; then
+			DB_DATA_PATH=${arr1[1]}
+		elif [[ "${arr1[0]}" =~ "DB_LOG_PATH" ]]; then
+			DB_LOG_PATH=${arr1[1]}
 		elif [[ "${arr1[0]}" =~ "NGINX_LOG_PATH" ]]; then
 			NGINX_LOG_PATH=${arr1[1]}
 		elif [[ "${arr1[0]}" =~ "NGINX_SSL_PATH" ]]; then
@@ -175,7 +232,17 @@ install() {
 	if [[ ${REINSTALL} = "false" ]]; then
 		clear
 	fi
-	
+
+	if [[ ! -d ${DB_DATA_PATH} ]]; then
+  		mkdir -p ${DB_DATA_PATH}
+  		chmod 777 ${DB_DATA_PATH}
+  fi
+
+  if [[ ! -d ${DB_LOG_PATH} ]]; then
+  		mkdir -p ${DB_LOG_PATH}
+  		chmod 777 ${DB_DATA_PATH}
+  fi
+
 	if [[ ! -d ${NGINX_CONF_PATH} ]]; then
 		mkdir -p ${NGINX_CONF_PATH}
 	fi
@@ -192,11 +259,16 @@ install() {
 		getCer
 	else
 		sed -i -e "s/example.com/$DOMAIN/g" docker/80.conf \
-		&& cp docker/80.conf ${NGINX_CONF_PATH}/default.conf
+		&& cp docker/80.conf ${NGINX_CONF_PATH}/sspanel.conf
 	fi
 	
 	cd ${CUR_DIR}/docker \
-	&& docker-compose up -d
+	&& docker-compose up -d \
+	&& docker exec -it mariadb ln -sf /usr/share/zoneinfo/${TZ} /etc/localtime \
+	&& docker exec -it nginx ln -sf /usr/share/zoneinfo/${TZ} /etc/localtime \
+	&& docker exec -it nginx chmod 777 /var/log/nginx \
+	&& docker exec -it nginx sed -i "s@#gzip  on;@#gzip  on;\\n\\n    resolver 8.8.8.8;@g" /etc/nginx/nginx.conf \
+	&& docker exec -it nginx nginx -s reload
 }
 
 clear() {

@@ -8,8 +8,6 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
-    env_file:
-     - .env
     environment:
       # sspanel 配置
       - APPNAME=${APPNAME}
@@ -33,6 +31,9 @@ services:
       - BRANCH=${BRANCH}
       - TOKEN=${TOKEN}
       - DOWNLOADCLIENT=${DOWNLOADCLIENT}
+      # redis 配置
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
       - mariadb
       - nginx
@@ -41,11 +42,11 @@ services:
       - sspanel_config:/opt/bitnami/backup
     restart: always
     networks:
-      - sspanel_network
+      - ext_network
 
   nginx:
     container_name: nginx
-    image: docker.io/nginx
+    image: docker.io/nginx:alpine
     restart: always
     ports:
      - "80:80"
@@ -56,7 +57,7 @@ services:
      - ${NGINX_LOG_PATH}:/var/log/nginx
      - ${NGINX_SSL_PATH}:/etc/nginx/ssl
     networks:
-      - sspanel_network
+      - ext_network
 
   mariadb:
     container_name: mariadb
@@ -64,16 +65,19 @@ services:
     # 需要外网访问，请取消注释
     # ports:
     #   - '${DB_PORT}:3306'
-    volumes:
-      - mariadb_data:/bitnami/mariadb
     environment:
       # ALLOW_EMPTY_PASSWORD is recommended only for development.
-      - ALLOW_EMPTY_PASSWORD=yes
+      # - ALLOW_EMPTY_PASSWORD=yes
+      # - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MARIADB_USER=${DB_USERNAME}
       - MARIADB_PASSWORD=${DB_PASSWORD}
       - MARIADB_DATABASE=${DB_DATABASE}
       - MARIADB_CHARACTER_SET=${DB_CHARACTER_SET}
       - MARIADB_COLLATE=${DB_COLLATE}
+    volumes:
+      - mariadb_data:/bitnami/mariadb
+      # - ${DB_DATA_PATH}:/bitnami/mariadb
+      - ${DB_LOG_PATH}:/opt/bitnami/mariadb/logs
     restart: unless-stopped
     healthcheck:
       test: ['CMD', '/opt/bitnami/scripts/mariadb/healthcheck.sh']
@@ -81,16 +85,34 @@ services:
       timeout: 5s
       retries: 6
     networks:
-      - sspanel_network
+      - ext_network
+
+  redis:
+    container_name: redis
+    image: docker.io/bitnami/redis:7.0.12
+    environment:
+      # ALLOW_EMPTY_PASSWORD is recommended only for development.
+      # - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    # ports:
+    # - '${REDIS_PORT}:6379'
+    volumes:
+      - redis_data:/bitnami/redis/data
+    restart: unless-stopped
+    networks:
+      - ext_network
 
 volumes:
   mariadb_data:
+    driver: local
+  redis_data:
     driver: local
   sspanel_config:
     driver: local
 
 networks:
-  sspanel_network:
+  ext_network:
     driver: bridge
     ipam:
       config:

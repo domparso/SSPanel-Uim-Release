@@ -1,0 +1,87 @@
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.eric6project/
+.ropeproject/
+.idea/
+.idea/*
+*.iml
+.project
+*.e4p
+.vscode
+*.epj
+
+www/node_modules
+test*
+
+
+.DS_Store
+.thumbs.db
+node_modules
+
+# Quasar core related directories
+.quasar
+/dist
+
+# Cordova related directories and files
+/src-cordova/node_modules
+/src-cordova/platforms
+/src-cordova/plugins
+/src-cordova/www
+
+# Capacitor related directories and files
+/src-capacitor/www
+/src-capacitor/node_modules
+
+# BEX related directories and files
+/src-bex/www
+/src-bex/js/core
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# cache file and directory
+.directory/
+*.pyc
+*.pyo
+*.orig
+*.bak
+*.rej
+*~
+cur/
+tmp/
+__pycache__/
+**/*.pyc
+*.__pycache__/
+*.DS_Store
+logs/
+POMS_Station.build/
+POMS_Station.dist/
+poslabel/
+*.patch
+*.spec
+test*.*
+ui/test*
+dist/
+build/
+poslabel/
+~$*.xlsx
+
+# npm
+
+# yarn
+yarn.lock
+
+
+# this project
+*.pem
+config.json
+config/base.cfg

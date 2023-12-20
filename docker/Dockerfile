@@ -9,7 +9,7 @@ LABEL \
 	org.opencontainers.image.authors="Domparso"
 
 RUN apt-get update \
-	&& apt-get install -y git wget bzip2 build-essential php7.4-dev libxml2 libxml2-dev\
+	&& apt-get install -y git wget bzip2 build-essential php7.4-dev libxml2 libxml2-dev \
 	&& rm -rf /var/lib/apt/lists/*
 
 # download php
@@ -28,9 +28,16 @@ RUN cd /tmp \
 RUN cd /tmp/php-8.2.1/ext/opcache/ \
 	&& phpize \
 	&& ./configure --with-php-config=/opt/bitnami/php/bin/php-config \
-	&& make && make install
-#   && sed -i s@/;zend_extension=opcache/@/zend_extension=opcache/@g /opt/bitnami/php/etc/php.ini
-#   && echo "zend_extension=opcache" >> /opt/bitnami/php/etc/php.ini
+	&& make && make install \
+#	&& sed -i s@/;zend_extension=opcache/@/zend_extension=opcache/@g /opt/bitnami/php/etc/php.ini
+#	&& echo "zend_extension=opcache" >> /opt/bitnami/php/etc/php.ini
+	&& sed -i "s@;opcache.file_cache=@opcache.file_cache=/tmp@g" \
+	-i "s@opcache.interned_strings_buffer = 8@opcache.interned_strings_buffer = 64\nopcache.jit=on\\nopcache.jit_buffer_size=256M@g" \
+	-i "s@opcache.max_accelerated_files = 4000@opcache.max_accelerated_files = 65535@g" \
+	-i "s@opcache.memory_consumption = 128@opcache.memory_consumption = 512@g" \
+	-i "s@;opcache.validate_permission=0@opcache.validate_permission=on@g" \
+	-i "s@;opcache.validate_root=0@opcache.validate_root=on@g" \
+	/opt/bitnami/php/etc/php.ini
 
 # php-xmlrpc
 RUN cd /tmp \
@@ -41,6 +48,39 @@ RUN cd /tmp \
 	&& ./configure --with-php-config=/opt/bitnami/php/bin/php-config \
 	&& make && make install \
 	&& echo "extension=xmlrpc" >> /opt/bitnami/php/etc/php.ini
+
+# php-redis
+RUN cd /tmp \
+	&& wget https://pecl.php.net/get/redis-5.3.7.tgz \
+	&& tar zxvf redis-5.3.7.tgz \
+	&& cd redis-5.3.7 \
+	&& phpize \
+	&& ./configure --with-php-config=/opt/bitnami/php/bin/php-config \
+	&& make && make install \
+	&& echo "extension=redis.so" >> /opt/bitnami/php/etc/php.ini
+
+# libyaml
+RUN cd /tmp \
+    && wget -O libyaml-0.2.5.tar.gz https://github.com/yaml/libyaml/archive/0.2.5.tar.gz \
+    && tar zxvf libyaml-0.2.5.tar.gz \
+    && cd libyaml-0.2.5 \
+    && ./bootstrap \
+    && ./configure \
+    && make && make install
+
+# yaml
+RUN cd /tmp \
+	&& wget https://pecl.php.net/get/yaml-2.2.3.tgz \
+	&& tar xf yaml-2.2.3.tgz \
+	&& cd yaml-2.2.3 \
+	&& phpize \
+	&& ./configure --with-php-config=/opt/bitnami/php/bin/php-config \
+	&& make && make install \
+	&& echo "extension=yaml" >> /opt/bitnami/php/etc/php.ini
+
+# 禁用一些危险的 PHP Function
+RUN sed -i 's@^disable_functions.*@disable_functions = passthru,exec,system,chroot,chgrp,chown,shell_exec,proc_open,proc_get_status,ini_alter,ini_restore,dl,readlink,symlink,popepassthru,stream_socket_server,fsocket,popen@' /opt/bitnami/php/etc/php.ini \
+	sed -i 's@^disable_functions.*@disable_functions = passthru,exec,system,chroot,chgrp,chown,shell_exec,proc_open,proc_get_status,ini_alter,ini_restore,dl,readlink,symlink,popepassthru,stream_socket_server,fsocket,popen@' /opt/bitnami/php/etc/php.ini
 
 
 FROM bitnami/php-fpm:$PHP_VERSION 
@@ -57,6 +97,7 @@ RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
 COPY --from=base /opt/bitnami /opt/bitnami
 COPY --from=base /opt/bitnami/php/etc /opt/bitnami/php/etc.default
+COPY --from=base /usr/local/lib/libyaml* /usr/local/lib/
 
 COPY init.sh /usr/local/bin/init.sh
 RUN chmod +x /usr/local/bin/init.sh

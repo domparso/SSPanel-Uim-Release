@@ -56,7 +56,7 @@ if [[ "`ls -A ${APPHOME}`" = "" ]]; then
 	
 	wget https://getcomposer.org/installer -O composer.phar \
 	&& php composer.phar \
-	&& php composer.phar install \
+	&& php composer.phar install --no-dev \
 	&& chmod -R 777 * \
 	&& cp config/.config.example.php config/.config.php \
 	&& cp config/appprofile.example.php config/appprofile.php
@@ -73,26 +73,25 @@ if [[ "`ls -A ${APPHOME}`" = "" ]]; then
 		sed -i -e "s/$_ENV\['key'\]        = 'ChangeMe';/$_ENV['key']        = '$APPKEY';/g" \
 		-e "s/$_ENV\['appName'\]    = 'SSPanel-UIM';/$_ENV['appName']    = '$APPNAME';/g" \
 		-e "s|$_ENV\['baseUrl'\]    = 'https://example.com';|$_ENV['baseUrl']    = '$BASEURL';|g" \
-		-e "s/$_ENV\['muKey'\]      = 'ChangeMe';/$_ENV['muKey']      = '$MUKEY';/g" \
+		-e "s/$_ENV\['muKey'\]       = 'ChangeMe';/$_ENV['muKey']       = '$MUKEY';/g" \
+		-e "s/$_ENV\['db_host'\]      = '';/$_ENV['db_host']      = '$DB_HOST';/g" \
 		-e "s/$_ENV\['db_database'\]  = 'sspanel';/$_ENV['db_database']  = '$DB_DATABASE';/g" \
 		-e "s/$_ENV\['db_username'\]  = 'root';/$_ENV['db_username']  = '$DB_USERNAME';/g" \
 		-e "s/$_ENV\['db_password'\]  = 'sspanel';/$_ENV['db_password']  = '$DB_PASSWORD';/g" \
 		-e "s/$_ENV\['db_charset'\]  = 'sspanel';/$_ENV['db_charset']  = '$DB_CHARACTER_SET';/g" \
 		-e "s/$_ENV\['db_collation'\]  = 'sspanel';/$_ENV['db_collation']  = '$DB_COLLATE';/g" \
+		-e "s/$_ENV\['redis_host'\]     = '127.0.0.1';/$_ENV['redis_host']     = '$REDIS_HOST';/g" \
+		-e "s/$_ENV\['redis_username'\] = '';/$_ENV['redis_username'] = '$REDIS_USERNAME';/g" \
+		-e "s/$_ENV\['redis_password'\] = '';/$_ENV['redis_password'] = '$REDIS_PASSWORD';/g" \
 		config/.config.php
 
-		if [[ -z "$DB_PORT" || "$DB_PORT" = "3306" ]]; then
-			sed -i -e "s/$_ENV\['db_host'\]      = '';/$_ENV['db_host']      = '$DB_HOST';/g" config/.config.php
-		else
-			sed -i -e "s/$_ENV\['db_host'\]      = '';/$_ENV['db_host']      = '$DB_HOST:$DB_PORT';/g" config/.config.php
+		if [[ -n "$DB_PORT" ]]; then
+			sed -i -e "s/$_ENV\['db_port'\]      = '3306';/$_ENV['db_port']      = '$DB_PORT';/g" config/.config.php
 		fi
-		
-		if [[ -n $MAXMIND_LICENSE_KEY ]];then
-			sed -i -e "s/$_ENV\['maxmind_license_key'\] = '';/$_ENV['maxmind_license_key'] = '$MAXMIND_LICENSE_KEY';/g" \
-			config/.config.php
+
+		if [[ -n "$REDIS_PORT" ]]; then
+			sed -i -e "s/$_ENV\['redis_port'\]     = 6379;/$_ENV['redis_port']     = $REDIS_PORT;/g" config/.config.php
 		fi
-		
-		echo "写入配置完成"
 	fi
 
 	# 站点初始化设置
@@ -124,7 +123,7 @@ if [[ "`ls -A ${APPHOME}`" = "" ]]; then
 	if [[ -n $ADMIN_MAIL && -n $ADMIN_PASSWORD ]]; then
 		sh -c '/bin/echo -e "$ADMIN_MAIL\n$ADMIN_PASSWORD\ny\n" | php xcat Tool createAdmin'
 	fi
-	
+
 	if [[ -n $MAXMIND_LICENSE_KEY ]];then
 		 php xcat Update
 	fi
@@ -147,15 +146,6 @@ fi
 echo "添加计划任务"
 crontab -l > cron.tmp
 echo "*/5 * * * * $PHPPATH $APPHOME/xcat  Cron" >> cron.tmp
-echo "*/1 * * * * $PHPPATH $APPHOME/xcat  Job CheckJob" >> cron.tmp
-echo "0 */1 * * * $PHPPATH $APPHOME/xcat  Job UserJob" >> cron.tmp
-echo "0 0 * * * $PHPPATH -n $APPHOME/xcat Job DailyJob" >> cron.tmp
-
-echo "5 0 * * * $PHPPATH $APPHOME/xcat FinanceMail day" >> cron.tmp
-echo "6 0 * * 0 $PHPPATH $APPHOME/xcat FinanceMail week" >> cron.tmp
-echo "7 0 1 * * $PHPPATH $APPHOME/xcat FinanceMail month" >> cron.tmp
-
-echo "*/1 * * * * $PHPPATH $APPHOME/xcat DetectGFW" >> cron.tmp
 
 crontab cron.tmp
 rm cron.tmp
