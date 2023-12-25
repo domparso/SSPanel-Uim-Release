@@ -146,45 +146,14 @@ getCer() {
 		if [[ -d ${DOMAIN} ]]; then
 			mv ${DOMAIN}_ecc ${DOMAIN}_ecc.bak
 		fi
-
-		./acme.sh --register-account  --server letsencrypt -m -d ${EMAIL} \
-		&& ./acme.sh --issue --standalone --server letsencrypt -d -d ${DOMAIN} --debug 2 \
-		# && ./acme.sh --issue --standalone -d ${DOMAIN} --debug 2
-		&& ln -s /root/.acme.sh/${DOMAIN}_ecc ${NGINX_SSL_PATH} \
-		&& sed -i "s/example.com/${DOMAIN}/g" ${CUR_DIR}/docker/443.conf \
-		&& cp ${CUR_DIR}/docker/443.conf ${NGINX_CONF_PATH}/sspanel.conf
 	else
 		curl https://get.acme.sh | sh -s email=${EMAIL} \
-		&& cd /root/.acme.sh \
-		&& ./acme.sh --register-account  --server letsencrypt -m -d ${EMAIL} \
-		&& ./acme.sh --issue --standalone --server letsencrypt -d -d ${DOMAIN} --debug 2 \
-		# && ./acme.sh --issue --standalone -d ${DOMAIN} --debug 2
-		&& ln -s /root/.acme.sh/${DOMAIN}_ecc ${NGINX_SSL_PATH} \
-		&& sed -i "s/example.com/${DOMAIN}/g" ${CUR_DIR}/docker/443.conf \
-		&& cp ${CUR_DIR}/docker/443.conf ${NGINX_CONF_PATH}/sspanel.conf
+		&& cd /root/.acme.sh
 	fi
-}
 
-getCerDocker() {
-	if [[ -d ${NGINX_SSL_PATH} ]]; then
-		rm -rf ${NGINX_SSL_PATH}
-	fi
-	
-	docker pull neilpang/acme.sh
-	
-	docker run \
-	--rm \
-	-it \
-	-v "/root/.acme.sh":/acme.sh \
-	neilpang/acme.sh --register-account -m ${EMAIL}
-	
-	docker pull neilpang/acme.sh \
-	&& docker run \
-	--rm \
-	-it \
-	-v ${ACME_PATH}:/acme.sh \
-	--net=host \
-	neilpang/acme.sh  --issue --standalone -d ${DOMAIN} --debug 2 \
+	./acme.sh --register-account  --server letsencrypt -m ${EMAIL} \
+	&& ./acme.sh --issue --standalone --server letsencrypt -d ${DOMAIN} --debug 2 \
+	# && ./acme.sh --issue --standalone -d ${DOMAIN} --debug 2
 	&& ln -s /root/.acme.sh/${DOMAIN}_ecc ${NGINX_SSL_PATH} \
 	&& sed -i "s/example.com/${DOMAIN}/g" ${CUR_DIR}/docker/443.conf \
 	&& cp ${CUR_DIR}/docker/443.conf ${NGINX_CONF_PATH}/sspanel.conf
@@ -265,6 +234,7 @@ install() {
 	cd ${CUR_DIR}/docker \
 	&& docker-compose up -d \
 	&& docker exec -it mariadb ln -sf /usr/share/zoneinfo/${TZ} /etc/localtime \
+	&& docker exec -it mariadb chmod 777 /opt/bitnami/mariadb/logs \
 	&& docker exec -it nginx ln -sf /usr/share/zoneinfo/${TZ} /etc/localtime \
 	&& docker exec -it nginx chmod 777 /var/log/nginx \
 	&& docker exec -it nginx sed -i "s@#gzip  on;@#gzip  on;\\n\\n    resolver 8.8.8.8;@g" /etc/nginx/nginx.conf \
